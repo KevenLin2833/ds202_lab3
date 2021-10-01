@@ -1,0 +1,93 @@
+---
+title: "lab3_lin"
+author: 'Keven Lin'
+date: 9/30/2021
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library('tidyverse')
+library(dplyr)
+library(readxl)
+lab3 = read_excel('temp.xls')
+# lab3 %>% drop_na()
+lab3
+lab3 %>% distinct(lab3$`Highest year of school completed`)
+```
+# 1. Find the average years of education for the respondents with each marital status. Arrange your output in a meaningful order and print. Describe any patterns you find.
+
+```{r}
+lab3 = lab3 %>% filter(!is.na(as.numeric(`Highest year of school completed`)))
+lab3 = lab3 %>% filter(!is.na(as.numeric(`Number of children`)))
+# lab3 %>% distinct(lab3$`Highest year of school completed`)
+# lab3 %>% distinct(lab3$`Number of children`)
+lab3$`Highest year of school completed` = as.integer(lab3$`Highest year of school completed`)
+lab3$`Number of children` = as.integer(lab3$`Number of children`)
+lab3 %>% group_by(`Marital status`) %>% summarise(averageEdu = mean(`Highest year of school completed`))
+```
+
+One really interesting pattern I've notice is that individuals who answer with 'no answer' in marital status tend to have the highest level of education. 
+
+# 2. Create a single data frame containing records for the better educated respondents with each marital status. A “better educated” respondent is someone who has strictly more years of education than the average among those with the same marital status. Print the structure of the data frame.
+```{r}
+betterEdu = lab3 %>% group_by(`Marital status`) %>% filter( ((`Marital status` %in% c('Divorced')) & `Highest year of school completed` > mean(`Highest year of school completed`)) |  
+                                                               ((`Marital status` %in% c('Married')) &  `Highest year of school completed` > mean(`Highest year of school completed`)) |
+                                                               ((`Marital status` %in% c('Never married')) &  `Highest year of school completed` > mean(`Highest year of school completed`)) | 
+                                                               ((`Marital status` %in% c('No answer')) &  `Highest year of school completed` > mean(`Highest year of school completed`)) |
+                                                               ((`Marital status` %in% c('Separated')) &  `Highest year of school completed` > mean(`Highest year of school completed`)) |
+                                                               ((`Marital status` %in% c('Widowed')) &  `Highest year of school completed` > mean(`Highest year of school completed`))
+                                                               )
+betterEdu = betterEdu[, c('Marital status', 'Highest year of school completed')]
+betterEdu
+str(betterEdu)
+```
+# 3. How is the happiness of a respondent related to his/her marriage status? Define that a person is happy if the response to question is “Very happy” or “Pretty happy”.
+```{r}
+lab3 = rename(lab3, 'MS' = 'Marital status')
+lab3 = rename(lab3, 'Child' = 'Number of children')
+lab3 = rename(lab3, 'SchoolYear' = 'Highest year of school completed')
+lab3 = rename(lab3, 'PP' = 'Political party affiliation')
+lab3 = rename(lab3, 'GH' = 'General happiness')
+
+temp = lab3 %>% group_by(MS) %>% count((GH = "Very happy"))
+temp1 = lab3 %>% group_by(MS) %>% count((GH = "Pretty happy"))
+output = data.frame(MS = temp['MS'], n = temp['n'] + temp1['n'])
+
+output
+ggplot(output, aes(x = MS, y = n)) + geom_bar(stat = "identity") + geom_text(aes(label = signif(n, digits = 3)), nudge_y = 4)
+```
+
+It's interesting to see that individuals who are married tend to be the most happy. I utilize the martial status and general happiness to create my table and graph to analysis the relationship between marital status and happiness. The reason I choose a bar plot is because I believe it is best way to compare and contrast different types of relationship and how do they compare in terms of general happiness. 
+
+# 4. Does party affiliation affect the relationship you found in the last question?
+
+```{r}
+lab3 %>% select(PP, GH) %>% count(PP, GH, sort = TRUE)
+
+temp = lab3 %>% group_by(PP) %>% count((GH = "Very happy"))
+temp1 = lab3 %>% group_by(PP) %>% count((GH = "Pretty happy"))
+output = data.frame(PP = temp['PP'], n = temp['n'] + temp1['n'])
+
+output
+ggplot(output, aes(x = PP, y = n)) + geom_bar(stat = "identity") + geom_text(aes(label = signif(n, digits = 3)), nudge_y = 4)
+```
+
+An interesting detail that I noticed is that not strong democrat tends to be the most happy. I've always thought that happiness is spread out every evenly in between different political groups, but this data shows otherwise. I choose to use political party and general happiness in my table and graph so that we can show a relationship between poltical parties and general happiness. The reason I choose a bar plot is I believe it is the best way to show a clear difference in the level of happiness between each policial group. 
+
+# 5. Explore an interesting question (not covered by the previous questions), and answer the question using the GSS data.
+
+```{r}
+
+temp = lab3 %>% select(Child, SchoolYear)
+temp = temp %>% group_by(SchoolYear) %>% summarise(avgChild = mean(Child))
+temp 
+ggplot(temp, aes(x = SchoolYear, y = avgChild)) + geom_bar(stat = "identity") + geom_text(aes(label = signif(avgChild, digits = 3)), nudge_y = 4)
+
+```
+
+I want to explore the relationship in number of years in school vs the number of children the person will have. I notice a very interesting trend where as the more years an individual spends in school, the less children he/she will have. 
+
